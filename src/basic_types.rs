@@ -1,4 +1,8 @@
-use std::ops::{Add, Mul, Sub};
+use std::ops::{Add, Div, Mul, MulAssign, Sub};
+
+pub trait Sqrt {
+    fn sqrt(&self) -> Self;
+}
 
 pub trait Tuple<T> {
     fn new(x: T, y: T, z: T) -> Self
@@ -8,10 +12,18 @@ pub trait Tuple<T> {
     fn zeros() -> Self
     where
         T: Default;
-}
 
-pub trait Sqrt {
-    fn sqrt(&self) -> Self;
+    fn normalize(&mut self)
+    where
+        T: Copy
+            + Add<Output = T>
+            + Mul<Output = T>
+            + Div<Output = T>
+            + MulAssign
+            + Sqrt
+            + PartialOrd,
+        f32: Into<T>,
+        f64: Into<T>;
 }
 
 pub trait Vector<T>: Tuple<T> {
@@ -28,7 +40,11 @@ pub trait Vector<T>: Tuple<T> {
         T: Copy + Add<Output = T> + Mul<Output = T> + Sqrt;
 }
 
-pub trait Point<T>: Tuple<T> {}
+pub trait Point<T>: Tuple<T> {
+    fn distance_from_origin(&self) -> T
+    where
+        T: Copy + Add<Output = T> + Mul<Output = T> + Sqrt;
+}
 
 #[derive(Default, Clone, Copy, PartialEq)]
 pub struct Vec3<T> {
@@ -60,6 +76,27 @@ impl<T> Tuple<T> for Vec3<T> {
             ..Default::default()
         }
     }
+
+    fn normalize(&mut self)
+    where
+        T: Copy
+            + Add<Output = T>
+            + Mul<Output = T>
+            + Div<Output = T>
+            + MulAssign
+            + Sqrt
+            + PartialOrd,
+        f32: Into<T>,
+        f64: Into<T>,
+    {
+        let len = self.magnitude();
+        if len > 0.0.into() {
+            let inv_len = 1.0.into() / len;
+            self.x *= inv_len;
+            self.y *= inv_len;
+            self.z *= inv_len;
+        }
+    }
 }
 
 impl<T> Tuple<T> for Point3<T> {
@@ -76,6 +113,27 @@ impl<T> Tuple<T> for Point3<T> {
     {
         Self {
             ..Default::default()
+        }
+    }
+
+    fn normalize(&mut self)
+    where
+        T: Copy
+            + Add<Output = T>
+            + Mul<Output = T>
+            + Div<Output = T>
+            + MulAssign
+            + Sqrt
+            + PartialOrd,
+        f32: Into<T>,
+        f64: Into<T>,
+    {
+        let len = self.distance_from_origin();
+        if len > 0.0.into() {
+            let inv_len = 1.0.into() / len;
+            self.x *= inv_len;
+            self.y *= inv_len;
+            self.z *= inv_len;
         }
     }
 }
@@ -144,9 +202,73 @@ impl<T: Sub<Output = T>> Sub for Vec3<T> {
     }
 }
 
+impl<T: Add<Output = T>> Add for Point3<T> {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
+        }
+    }
+}
+
+impl<T: Sub<Output = T>> Sub for Point3<T> {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
+    }
+}
+
+impl<T> Point<T> for Point3<T> {
+    fn distance_from_origin(&self) -> T
+    where
+        T: Copy + Add<Output = T> + Mul<Output = T> + Sqrt,
+    {
+        let value = self.x * self.x + self.y * self.y + self.z * self.z;
+        value.sqrt()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Point3, Tuple, Vec3, Vector};
+
+    #[macro_export]
+    macro_rules! assert_approx_eq {
+        ($a:expr, $b:expr) => {{
+            let eps = 1.0e-6;
+            let (a, b) = (&$a, &$b);
+            assert!(
+                (*a - *b).abs() < eps,
+                "assertion failed: `(left !== right)` \
+                 (left: `{:?}`, right: `{:?}`, expect diff: `{:?}`, real diff: `{:?}`)",
+                *a,
+                *b,
+                eps,
+                (*a - *b).abs()
+            );
+        }};
+        ($a:expr, $b:expr, $eps:expr) => {{
+            let (a, b) = (&$a, &$b);
+            let eps = $eps;
+            assert!(
+                (*a - *b).abs() < eps,
+                "assertion failed: `(left !== right)` \
+                 (left: `{:?}`, right: `{:?}`, expect diff: `{:?}`, real diff: `{:?}`)",
+                *a,
+                *b,
+                eps,
+                (*a - *b).abs()
+            );
+        }};
+    }
 
     #[test]
     fn create_vector() {
@@ -192,8 +314,8 @@ mod tests {
         let lhs: Vec3<f64> = Vec3::new(3.1, 5.0, -2.0);
         let rhs: Vec3<f64> = Vec3::new(11.27, -9.0, 0.0);
         let dot = Vec3::dot(&lhs, &rhs);
-        let epsilon = (-10.063 - dot).abs();
-        assert!(epsilon < 0.00001);
+
+        assert_approx_eq!(dot, -10.063, 1e-12);
     }
 
     #[test]
@@ -226,5 +348,20 @@ mod tests {
         assert_eq!(diff.x, -3.0);
         assert_eq!(diff.y, -3.0);
         assert_eq!(diff.z, -3.0);
+    }
+
+    #[test]
+    fn normalize_vector_and_point() {
+        let mut vec: Vec3<f64> = Vec3::new(1.0, 2.0, 3.0);
+        vec.normalize();
+        assert_approx_eq!(vec.x, 0.2672612419124244, 1e-12);
+        assert_approx_eq!(vec.y, 0.5345224838248488, 1e-12);
+        assert_approx_eq!(vec.z, 0.8017837257372732, 1e-12);
+
+        let mut point: Point3<f64> = Point3::new(1.0, 2.0, 3.0);
+        point.normalize();
+        assert_approx_eq!(point.x, 0.2672612419124244, 1e-12);
+        assert_approx_eq!(point.y, 0.5345224838248488, 1e-12);
+        assert_approx_eq!(point.z, 0.8017837257372732, 1e-12);
     }
 }
