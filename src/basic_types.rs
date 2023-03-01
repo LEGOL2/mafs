@@ -236,6 +236,12 @@ impl<T> Point<T> for Point3<T> {
     }
 }
 
+pub type Vec3f64 = Vec3<f64>;
+pub type Vec3f32 = Vec3<f32>;
+
+pub type Point3f64 = Point3<f64>;
+pub type Point3f32 = Point3<f32>;
+
 #[cfg(test)]
 mod tests {
     use super::{Point3, Tuple, Vec3, Vector};
