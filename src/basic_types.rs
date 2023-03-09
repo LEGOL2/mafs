@@ -1,18 +1,23 @@
-use std::ops::{Add, Div, Mul, MulAssign, Sub};
+use std::ops::{Add, Div, Index, IndexMut, Mul, MulAssign, Sub};
 
+/// Generic square root that works with all numeric types
 pub trait Sqrt {
     fn sqrt(&self) -> Self;
 }
 
+/// Represents the most simple group of numbers of the same type
 pub trait Tuple<T> {
+    /// Create new Tuple with given values
     fn new(x: T, y: T, z: T) -> Self
     where
         T: Copy;
 
+    /// Create new Tuple with values representing 0
     fn zeros() -> Self
     where
         T: Default;
 
+    /// Convert elements so that they are in range [0; 1]
     fn normalize(&mut self)
     where
         T: Copy
@@ -26,26 +31,33 @@ pub trait Tuple<T> {
         f64: Into<T>;
 }
 
+/// Represents set of operations typical for a mathematical vector
 pub trait Vector<T>: Tuple<T> {
+    /// Elementwise dot product
     fn dot(lhs: &Self, rhs: &Self) -> T
     where
         T: Copy + Add<Output = T> + Mul<Output = T>;
 
+    /// Cross product of two vectors, generating a 3rd one that is perpendicular to other two
     fn cross(&self, other: &Self) -> Self
     where
         T: Copy + Add<Output = T> + Mul<Output = T> + Sub<Output = T>;
 
+    /// Length of the vector
     fn magnitude(&self) -> T
     where
         T: Copy + Add<Output = T> + Mul<Output = T> + Sqrt;
 }
 
+/// Represents set of operations typical for a mathematical point
 pub trait Point<T>: Tuple<T> {
+    /// Calculates distance from origin to point
     fn distance_from_origin(&self) -> T
     where
         T: Copy + Add<Output = T> + Mul<Output = T> + Sqrt;
 }
 
+/// Vector with 3 elements
 #[derive(Default, Clone, Copy, PartialEq)]
 pub struct Vec3<T> {
     pub x: T,
@@ -53,6 +65,7 @@ pub struct Vec3<T> {
     pub z: T,
 }
 
+/// Point with 3 elements
 #[derive(Default, Clone, Copy, PartialEq)]
 pub struct Point3<T> {
     pub x: T,
@@ -202,6 +215,14 @@ impl<T: Sub<Output = T>> Sub for Vec3<T> {
     }
 }
 
+impl<T: Copy + Add<Output = T> + Mul<Output = T> + Sub<Output = T>> Mul for Vec3<T> {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        self.cross(&rhs)
+    }
+}
+
 impl<T: Add<Output = T>> Add for Point3<T> {
     type Output = Self;
 
@@ -236,11 +257,59 @@ impl<T> Point<T> for Point3<T> {
     }
 }
 
-pub type Vec3f64 = Vec3<f64>;
-pub type Vec3f32 = Vec3<f32>;
+impl<T> Index<usize> for Vec3<T> {
+    type Output = T;
 
-pub type Point3f64 = Point3<f64>;
-pub type Point3f32 = Point3<f32>;
+    fn index(&self, index: usize) -> &Self::Output {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            _ => panic!("Out of bound access in Vec3<T>!"),
+        }
+    }
+}
+
+impl<T> IndexMut<usize> for Vec3<T> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => &mut self.z,
+            _ => panic!("Out of bound access in Vec3<T>!"),
+        }
+    }
+}
+
+impl<T> Index<usize> for Point3<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            _ => panic!("Out of bound access in Point3<T>!"),
+        }
+    }
+}
+
+impl<T> IndexMut<usize> for Point3<T> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => &mut self.z,
+            _ => panic!("Out of bound access in Point3<T>!"),
+        }
+    }
+}
+
+pub type Vec3d = Vec3<f64>;
+pub type Vec3f = Vec3<f32>;
+
+pub type Point3d = Point3<f64>;
+pub type Point3f = Point3<f32>;
 
 #[cfg(test)]
 mod tests {
@@ -277,16 +346,27 @@ mod tests {
     }
 
     #[test]
-    fn create_vector() {
+    fn create_and_modify_vector() {
         let zeros: Vec3<f64> = Vec3::zeros();
         assert_eq!(zeros.x, 0.0);
+        assert_eq!(zeros[0], 0.0);
         assert_eq!(zeros.y, 0.0);
+        assert_eq!(zeros[1], 0.0);
         assert_eq!(zeros.z, 0.0);
+        assert_eq!(zeros[2], 0.0);
 
         let vec: Vec3<f64> = Vec3::new(1.1, 2.2, 3.3);
         assert_eq!(vec.x, 1.1);
         assert_eq!(vec.y, 2.2);
         assert_eq!(vec.z, 3.3);
+
+        let mut vec: Vec3<f64> = Vec3::zeros();
+        vec[0] = 1.1;
+        vec[1] = 2.2;
+        vec[2] = 3.3;
+        assert_eq!(vec[0], 1.1);
+        assert_eq!(vec[1], 2.2);
+        assert_eq!(vec[2], 3.3);
     }
 
     #[test]
@@ -329,6 +409,11 @@ mod tests {
         let lhs: Vec3<f64> = Vec3::new(3.1, 5.0, -2.0);
         let rhs: Vec3<f64> = Vec3::new(11.27, -9.0, 0.0);
         let vec = Vec3::cross(&lhs, &rhs);
+        assert_eq!(vec.x, -18.0);
+        assert_eq!(vec.y, -22.54);
+        assert_eq!(vec.z, -84.25);
+
+        let vec = lhs * rhs;
         assert_eq!(vec.x, -18.0);
         assert_eq!(vec.y, -22.54);
         assert_eq!(vec.z, -84.25);

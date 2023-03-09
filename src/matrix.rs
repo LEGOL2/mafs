@@ -1,10 +1,12 @@
-use std::ops::{Add, Index, IndexMut, Mul};
+use std::ops::{Add, Index, IndexMut, Mul, Div};
 
-pub struct Matrix44<T> {
+use crate::{Point3, Tuple, Vec3};
+
+pub struct Matrix4<T> {
     pub m: [[T; 4]; 4],
 }
 
-impl<T> Default for Matrix44<T>
+impl<T> Default for Matrix4<T>
 where
     T: Default,
 {
@@ -15,7 +17,7 @@ where
     }
 }
 
-impl<T> Index<usize> for Matrix44<T> {
+impl<T> Index<usize> for Matrix4<T> {
     type Output = [T; 4];
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -23,24 +25,24 @@ impl<T> Index<usize> for Matrix44<T> {
     }
 }
 
-impl<T> IndexMut<usize> for Matrix44<T> {
+impl<T> IndexMut<usize> for Matrix4<T> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.m[index]
     }
 }
 
-impl<T> Mul for Matrix44<T>
+impl<T> Mul for Matrix4<T>
 where
     T: Copy + Default + Add<Output = T> + Mul<Output = T>,
 {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        Self::multiply(&self, &rhs)
+        multiply(&self, &rhs)
     }
 }
 
-impl<T> Matrix44<T> {
+impl<T> Matrix4<T> {
     pub fn new(
         a: T,
         b: T,
@@ -67,43 +69,13 @@ impl<T> Matrix44<T> {
         }
     }
 
-    pub fn multiply(lhs: &Self, rhs: &Self) -> Self
+    pub fn zeros() -> Self
     where
-        T: Default + Copy + Mul<Output = T> + Add<Output = T>,
+        T: Default,
     {
-        let mut result = Self {
+        Self {
             ..Default::default()
-        };
-
-        let b0 = rhs[0];
-        let b1 = rhs[1];
-        let b2 = rhs[2];
-        let b3 = rhs[3];
-
-        let a = lhs[0];
-        result[0][0] = a[0] * b0[0] + a[1] * b1[0] + a[2] * b2[0] + a[3] * b3[0];
-        result[0][1] = a[0] * b0[1] + a[1] * b1[1] + a[2] * b2[1] + a[3] * b3[1];
-        result[0][2] = a[0] * b0[2] + a[1] * b1[2] + a[2] * b2[2] + a[3] * b3[2];
-        result[0][3] = a[0] * b0[3] + a[1] * b1[3] + a[2] * b2[3] + a[3] * b3[3];
-
-        let a = lhs[1];
-        result[1][0] = a[0] * b0[0] + a[1] * b1[0] + a[2] * b2[0] + a[3] * b3[0];
-        result[1][1] = a[0] * b0[1] + a[1] * b1[1] + a[2] * b2[1] + a[3] * b3[1];
-        result[1][2] = a[0] * b0[2] + a[1] * b1[2] + a[2] * b2[2] + a[3] * b3[2];
-        result[1][3] = a[0] * b0[3] + a[1] * b1[3] + a[2] * b2[3] + a[3] * b3[3];
-
-        let a = lhs[2];
-        result[2][0] = a[0] * b0[0] + a[1] * b1[0] + a[2] * b2[0] + a[3] * b3[0];
-        result[2][1] = a[0] * b0[1] + a[1] * b1[1] + a[2] * b2[1] + a[3] * b3[1];
-        result[2][2] = a[0] * b0[2] + a[1] * b1[2] + a[2] * b2[2] + a[3] * b3[2];
-        result[2][3] = a[0] * b0[3] + a[1] * b1[3] + a[2] * b2[3] + a[3] * b3[3];
-
-        let a = lhs[3];
-        result[3][0] = a[0] * b0[0] + a[1] * b1[0] + a[2] * b2[0] + a[3] * b3[0];
-        result[3][1] = a[0] * b0[1] + a[1] * b1[1] + a[2] * b2[1] + a[3] * b3[1];
-        result[3][2] = a[0] * b0[2] + a[1] * b1[2] + a[2] * b2[2] + a[3] * b3[2];
-        result[3][3] = a[0] * b0[3] + a[1] * b1[3] + a[2] * b2[3] + a[3] * b3[3];
-        result
+        }
     }
 
     pub fn transpose(&mut self)
@@ -129,18 +101,76 @@ impl<T> Matrix44<T> {
             self[2][3], self[3][3],
         )
     }
+
+    pub fn inverse(&mut self) {
+        todo!("Work in progress");
+    }
 }
 
-pub type Matrix44f64 = Matrix44<f64>;
-pub type Matrix44f32 = Matrix44<f32>;
+pub fn multiply<T>(lhs: &Matrix4<T>, rhs: &Matrix4<T>) -> Matrix4<T>
+where
+    T: Default + Copy + Mul<Output = T> + Add<Output = T>,
+{
+    let mut result = Matrix4::zeros();
+
+    let b0 = rhs[0];
+    let b1 = rhs[1];
+    let b2 = rhs[2];
+    let b3 = rhs[3];
+
+    let a = lhs[0];
+    result[0][0] = a[0] * b0[0] + a[1] * b1[0] + a[2] * b2[0] + a[3] * b3[0];
+    result[0][1] = a[0] * b0[1] + a[1] * b1[1] + a[2] * b2[1] + a[3] * b3[1];
+    result[0][2] = a[0] * b0[2] + a[1] * b1[2] + a[2] * b2[2] + a[3] * b3[2];
+    result[0][3] = a[0] * b0[3] + a[1] * b1[3] + a[2] * b2[3] + a[3] * b3[3];
+
+    let a = lhs[1];
+    result[1][0] = a[0] * b0[0] + a[1] * b1[0] + a[2] * b2[0] + a[3] * b3[0];
+    result[1][1] = a[0] * b0[1] + a[1] * b1[1] + a[2] * b2[1] + a[3] * b3[1];
+    result[1][2] = a[0] * b0[2] + a[1] * b1[2] + a[2] * b2[2] + a[3] * b3[2];
+    result[1][3] = a[0] * b0[3] + a[1] * b1[3] + a[2] * b2[3] + a[3] * b3[3];
+
+    let a = lhs[2];
+    result[2][0] = a[0] * b0[0] + a[1] * b1[0] + a[2] * b2[0] + a[3] * b3[0];
+    result[2][1] = a[0] * b0[1] + a[1] * b1[1] + a[2] * b2[1] + a[3] * b3[1];
+    result[2][2] = a[0] * b0[2] + a[1] * b1[2] + a[2] * b2[2] + a[3] * b3[2];
+    result[2][3] = a[0] * b0[3] + a[1] * b1[3] + a[2] * b2[3] + a[3] * b3[3];
+
+    let a = lhs[3];
+    result[3][0] = a[0] * b0[0] + a[1] * b1[0] + a[2] * b2[0] + a[3] * b3[0];
+    result[3][1] = a[0] * b0[1] + a[1] * b1[1] + a[2] * b2[1] + a[3] * b3[1];
+    result[3][2] = a[0] * b0[2] + a[1] * b1[2] + a[2] * b2[2] + a[3] * b3[2];
+    result[3][3] = a[0] * b0[3] + a[1] * b1[3] + a[2] * b2[3] + a[3] * b3[3];
+    result
+}
+
+pub fn mul_point_matrix<T>(p: &Point3<T>, m: &Matrix4<T>) -> Point3<T> where T: Copy + Mul<Output = T> + Add<Output = T> + Div<Output = T> {
+    let x = p[0] * m[0][0] + p[1] * m[1][0] + p[2] * m[2][0] + m[3][0];
+    let y = p[0] * m[0][1] + p[1] * m[1][1] + p[2] * m[2][1] + m[3][1];
+    let z = p[0] * m[0][2] + p[1] * m[1][2] + p[2] * m[2][2] + m[3][2];
+    let w = p[0] * m[0][3] + p[1] * m[1][3] + p[2] * m[2][3] + m[3][3];
+
+    Point3::new(x/w, y/w, z/w)
+}
+
+pub fn mul_vec_matrix<T>(v: &Vec3<T>, m: &Matrix4<T>) -> Vec3<T> where T: Copy + Mul<Output = T> + Add<Output = T> + Div<Output = T> {
+    let x = v[0] * m[0][0] + v[1] * m[1][0] + v[2] * m[2][0];
+    let y = v[0] * m[0][1] + v[1] * m[1][1] + v[2] * m[2][1];
+    let z = v[0] * m[0][2] + v[1] * m[1][2] + v[2] * m[2][2];
+
+    Vec3::new(x, y, z)
+}
+
+pub type Mat4d = Matrix4<f64>;
+pub type Mat4f = Matrix4<f32>;
 
 #[cfg(test)]
 mod tests {
-    use super::{Matrix44, Matrix44f64};
+    use super::{multiply, Mat4d, Matrix4};
 
     #[test]
     fn create_matrix() {
-        let m1 = Matrix44f64 {
+        let m1 = Mat4d {
             ..Default::default()
         };
         for i in 0..4 {
@@ -149,7 +179,7 @@ mod tests {
             }
         }
 
-        let m2 = Matrix44f64::new(
+        let m2 = Mat4d::new(
             1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
         );
         assert_eq!(m2[0][0], 1.0);
@@ -172,9 +202,9 @@ mod tests {
 
     #[test]
     fn multiply_matrieces() {
-        let m1 = Matrix44::new(5, 7, 9, 10, 2, 3, 3, 8, 8, 10, 2, 3, 3, 3, 4, 8);
-        let m2 = Matrix44::new(3, 10, 12, 18, 12, 1, 4, 9, 9, 10, 12, 2, 3, 12, 4, 10);
-        let result = Matrix44::multiply(&m1, &m2);
+        let m1 = Matrix4::new(5, 7, 9, 10, 2, 3, 3, 8, 8, 10, 2, 3, 3, 3, 4, 8);
+        let m2 = Matrix4::new(3, 10, 12, 18, 12, 1, 4, 9, 9, 10, 12, 2, 3, 12, 4, 10);
+        let result = multiply(&m1, &m2);
         assert_eq!(result[0][0], 210);
         assert_eq!(result[0][1], 267);
         assert_eq!(result[0][2], 236);
@@ -213,7 +243,7 @@ mod tests {
 
     #[test]
     fn transpose_test() {
-        let mut m = Matrix44::new(5, 7, 9, 10, 2, 3, 3, 8, 8, 10, 2, 3, 3, 3, 4, 8);
+        let mut m = Matrix4::new(5, 7, 9, 10, 2, 3, 3, 8, 8, 10, 2, 3, 3, 3, 4, 8);
         m.transpose();
         assert_eq!(m[0][0], 5);
         assert_eq!(m[0][1], 2);
