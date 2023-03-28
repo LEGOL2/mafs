@@ -1,23 +1,18 @@
 use std::ops::{Add, Div, Index, IndexMut, Mul, MulAssign, Sub};
 
-/// Generic square root that works with all numeric types
 pub trait Sqrt {
     fn sqrt(&self) -> Self;
 }
 
-/// Represents the most simple group of numbers of the same type
 pub trait Tuple<T> {
-    /// Create new Tuple with given values
     fn new(x: T, y: T, z: T) -> Self
     where
         T: Copy;
 
-    /// Create new Tuple with values representing 0
     fn zeros() -> Self
     where
         T: Default;
 
-    /// Convert elements so that they are in range [0; 1]
     fn normalize(&mut self)
     where
         T: Copy
@@ -31,33 +26,26 @@ pub trait Tuple<T> {
         f64: Into<T>;
 }
 
-/// Represents set of operations typical for a mathematical vector
 pub trait Vector<T>: Tuple<T> {
-    /// Elementwise dot product
     fn dot(lhs: &Self, rhs: &Self) -> T
     where
         T: Copy + Add<Output = T> + Mul<Output = T>;
 
-    /// Cross product of two vectors, generating a 3rd one that is perpendicular to other two
     fn cross(&self, other: &Self) -> Self
     where
         T: Copy + Add<Output = T> + Mul<Output = T> + Sub<Output = T>;
 
-    /// Length of the vector
     fn magnitude(&self) -> T
     where
         T: Copy + Add<Output = T> + Mul<Output = T> + Sqrt;
 }
 
-/// Represents set of operations typical for a mathematical point
 pub trait Point<T>: Tuple<T> {
-    /// Calculates distance from origin to point
     fn distance_from_origin(&self) -> T
     where
         T: Copy + Add<Output = T> + Mul<Output = T> + Sqrt;
 }
 
-/// Vector with 3 elements
 #[derive(Default, Clone, Copy, PartialEq)]
 pub struct Vec3<T> {
     pub x: T,
@@ -65,7 +53,6 @@ pub struct Vec3<T> {
     pub z: T,
 }
 
-/// Point with 3 elements
 #[derive(Default, Clone, Copy, PartialEq)]
 pub struct Point3<T> {
     pub x: T,
